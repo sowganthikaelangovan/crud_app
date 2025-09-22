@@ -1,42 +1,38 @@
-const db = require("./db"); // this imports your knex connection
+const db = require('./db'); // your db connection file
 
-// Insert a new list
-async function insert(data) {
-  return db("Lists").insert({
-    Topic: data.Topic,
-    Description: data.Description,
-    Content: data.Content,
-    IsActive: data.IsActive !== undefined ? data.IsActive : true,
-    CreatedBy: data.CreatedBy
-  });
-}
+// Get all lists with creator and liked users
+async function getAllLists() {
+  const query = `
+    SELECT 
+        lst.Id,
+        lst.Topic,
+        lst.Description,
+        lst.Content,
+        lst.IsActive,
+        lst.CreateAt,
+        u.FirstName AS CreatedByFirstName,
+        u.LastName AS CreatedByLastName,
+        COALESCE(
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'UserId', lu.Id,
+                    'FirstName', lu.FirstName,
+                    'LastName', lu.LastName
+                )
+            ), JSON_ARRAY()
+        ) AS LikedUsers
+    FROM Lists lst
+    JOIN Users u ON lst.CreatedBy = u.Id
+    LEFT JOIN Likes lk ON lst.Id = lk.ListId
+    LEFT JOIN Users lu ON lk.UserId = lu.Id
+    GROUP BY lst.Id;
+  `;
 
-// Read all lists
-async function readAll() {
-  return db("Lists").select("*");
-}
-
-// Find a list by ID
-async function findById(id) {
-  return db("Lists").where({ Id: id }).first();
-}
-
-// Set IsActive (true or false)
-async function setIsActive(id, value) {
-  return db("Lists")
-    .where({ Id: id })
-    .update({ IsActive: value, UpdatedAt: db.fn.now() });
-}
-
-// Delete a list
-async function deleteList(id) {
-  return db("Lists").where({ Id: id }).del();
+  const [rows] = await db.query(query);
+  return rows;
 }
 
 module.exports = {
-  insert,
-  readAll,
-  findById,
-  setIsActive,
-  delete: deleteList
+  getAllLists,
+  // keep other CRUD methods (insert, findById, etc.)
 };

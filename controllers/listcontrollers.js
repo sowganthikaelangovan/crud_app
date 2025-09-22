@@ -1,58 +1,30 @@
 // controllers/listControllers.js
-const repo = require("../repository");
+const repo = require('../repository'); // or ./listsRepository
 
-// ✅ Get all lists
-exports.getAllLists = async (req, res) => {
+exports.getAll = async (req, res) => {
   try {
-    const lists = await repo.readAll();
+    const lists = await repo.getAllListsWithUsers();
     res.json(lists);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
 
-// ✅ Get list by Id
-exports.getListById = async (req, res) => {
+exports.likeList = async (req, res) => {
   try {
-    const { id } = req.params;
-    const list = await repo.findById(id);
-    if (!list) return res.status(404).json({ message: "List not found" });
-    res.json(list);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    const listId = parseInt(req.params.id, 10);
+    const { userId } = req.body; // pass userId in body
+    if (!userId) return res.status(400).json({ message: 'userId is required in body' });
 
-// ✅ Create a new list
-exports.createList = async (req, res) => {
-  try {
-    const { Topic, Description, Content, CreatedBy } = req.body;
-    await repo.insert({ Topic, Description, Content, CreatedBy });
-    res.status(201).json({ message: "List created successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    const result = await repo.likeList(listId, userId);
+    if (result.alreadyLiked) return res.status(200).json({ message: 'Already liked' });
 
-// ✅ Update list IsActive status
-exports.updateIsActive = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { value } = req.body;
-    await repo.setIsActive(id, value);
-    res.json({ message: "List status updated" });
+    res.status(201).json({ message: 'Liked', id: result.insertId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ✅ Delete list
-exports.deleteList = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await repo.delete(id);
-    res.json({ message: "List deleted successfully" });
-  } catch (err) {
+    console.error(err);
+    // if unique constraint triggers, handle gracefully
+    if (err && err.code === 'ER_DUP_ENTRY') return res.status(200).json({ message: 'Already liked' });
     res.status(500).json({ error: err.message });
   }
 };

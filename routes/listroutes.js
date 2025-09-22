@@ -1,13 +1,10 @@
-// routes/listRoutes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const listControllers = require("../controllers/listControllers");
+const listCtrl = require('../controllers/listcontrollers');
 
-// Routes
-router.get("/", listControllers.getAllLists);
-router.get("/:id", listControllers.getListById);
-router.post("/", listControllers.createList);
-router.put("/:id/active", listControllers.updateIsActive);
-router.delete("/:id", listControllers.deleteList);
+router.get('/', listCtrl.getAll);
+
+// like a list: POST /lists/:id/like { "userId": 2 }
+router.post('/:id/like', listCtrl.likeList);
 
 module.exports = router;
